@@ -7,8 +7,9 @@
 #ifndef _Included_Msg_H
 #define _Included_Msg_H
 
-#define 	OK			1 
-#define 	ERR			0
+#define OK					1
+#define ERR					2
+#define ACCOUNT_NOT_EXIST	3
 
 // msg type
 #define   TYPE_SERVER		1000
@@ -23,11 +24,14 @@
 #define 	CMD_LIST			'L'
 #define 	CMD_LOGIN			'I'
 #define 	CMD_LOGOUT			'O'
+#define 	CMD_JOIN_ROOM		'J'
+#define 	CMD_EXIT_ROOM		'X'
 #define 	CMD_TOALL 			'A'
 #define 	CMD_PREPARE 		'P'
 #define 	CMD_TRYINGBANKER 	'B'
 #define 	CMD_STAKE 			'S'
-#define 	CMD_PLAY 			'Y'
+#define 	CMD_SUBMIT 		'M'
+#define 	CMD_DETAILS_INFO 	'D'
 
 // cmd from Server to Client
 #define 	CMD_S2C_USER_IN		'N'
@@ -36,7 +40,7 @@
 #define 	CMD_S2C_STAKE_VALUE	'V'
 #define 	CMD_S2C_WILL_BANKER	'E'
 #define 	CMD_S2C_WILL_STAKE	'K'
-#define 	CMD_S2C_WILL_START	'T'
+#define 	CMD_S2C_WILL_SUBMIT	'T'
 #define 	CMD_S2C_CARD_PATTERN	'F'
 #define 	CMD_S2C_GAME_RESULT	'G'
 

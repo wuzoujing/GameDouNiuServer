@@ -42,7 +42,7 @@ void xiPai(Card cards[], int countCards)
 }	
 
 
-void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
+void faPai(AllGameInfo allGameInfo[], int maxCountUsers, Card cards[], int countCards)
 {
 	int i=0;
 	int j=0;
@@ -51,9 +51,9 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	{
 		for (i=0;i<maxCountUsers;i++)
 		{
-			if (users[i].deskId != -1 && users[i].isPrepared)
+			if (allGameInfo[i].deskId != -1 && allGameInfo[i].tempStatus.isPrepared)
 			{
-				users[i].gameInfo.cards[j] = cards[index];
+				allGameInfo[i].gameInfo.cards[j] = cards[index];
 				index++;
 			}
 		}
@@ -62,11 +62,11 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	for (i=0;i<maxCountUsers;i++)
 	{
 		printf("  user %d\n",i);
-		if (users[i].deskId != -1 && users[i].isPrepared)
+		if (allGameInfo[i].deskId != -1 && allGameInfo[i].tempStatus.isPrepared)
 		{
 			for(j=0;j<COUNT_CARD_EACH_PLAYER;j++)
 			{
-				printf("    %d->  id:%2d value:%2d\n",j, users[i].gameInfo.cards[j].id,users[i].gameInfo.cards[j].value);
+				printf("    %d->  id:%2d value:%2d\n",j, allGameInfo[i].gameInfo.cards[j].id,allGameInfo[i].gameInfo.cards[j].value);
 			}
 		}
 		else
@@ -204,48 +204,48 @@ int getMultiple(enum POKER_PATTERN pattern)
 
 // checkout stake between player and banker
 // 		return value: money that player win (positive) or lost (negative)
-int checkoutStake(UserInfo* player, UserInfo* banker, char* resultStr)
+int checkoutStake(DbUserInfo* player, AllGameInfo* playerGameInfo, DbUserInfo* banker, AllGameInfo* bankerGameInfo, char* resultStr)
 {
 	int ret = 0;
 	int multiple = 1;
-	if (banker->gameInfo.pokerPattern > player->gameInfo.pokerPattern)
+	if (bankerGameInfo->gameInfo.pokerPattern > playerGameInfo->gameInfo.pokerPattern)
 	{
 		printf("[checkoutStake]banker win\n");
 		strcpy(resultStr, "lost");
-		multiple = getMultiple(banker->gameInfo.pokerPattern);
-		ret = 0 - player->stake * multiple;
+		multiple = getMultiple(bankerGameInfo->gameInfo.pokerPattern);
+		ret = 0 - playerGameInfo->tempStatus.stake * multiple;
 		player->money += ret;
 		banker->money -= ret;
 		printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
 	}
-	else if (banker->gameInfo.pokerPattern < player->gameInfo.pokerPattern)
+	else if (bankerGameInfo->gameInfo.pokerPattern < playerGameInfo->gameInfo.pokerPattern)
 	{
 		printf("[checkoutStake]player win\n");
 		strcpy(resultStr, "win");
-		multiple = getMultiple(player->gameInfo.pokerPattern);
-		ret = player->stake * multiple;
+		multiple = getMultiple(playerGameInfo->gameInfo.pokerPattern);
+		ret = playerGameInfo->tempStatus.stake * multiple;
 		player->money += ret;
 		banker->money -= ret;
 		printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
 	}
 	else
 	{
-		if (banker->gameInfo.maxCardValue > player->gameInfo.maxCardValue)
+		if (bankerGameInfo->gameInfo.maxCardValue > playerGameInfo->gameInfo.maxCardValue)
 		{
 			printf("[checkoutStake]banker win as maxCardValue\n");
 			strcpy(resultStr, "lost");
-			multiple = getMultiple(banker->gameInfo.pokerPattern);
-			ret = 0 - player->stake * multiple;
+			multiple = getMultiple(bankerGameInfo->gameInfo.pokerPattern);
+			ret = 0 - playerGameInfo->tempStatus.stake * multiple;
 			player->money += ret;
 			banker->money -= ret;
 			printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
 		}
-		else if (banker->gameInfo.maxCardValue < player->gameInfo.maxCardValue)
+		else if (bankerGameInfo->gameInfo.maxCardValue < playerGameInfo->gameInfo.maxCardValue)
 		{
 			printf("[checkoutStake]player win as maxCardValue\n");
 			strcpy(resultStr, "win");
-			multiple = getMultiple(player->gameInfo.pokerPattern);
-			ret = player->stake * multiple;
+			multiple = getMultiple(playerGameInfo->gameInfo.pokerPattern);
+			ret = playerGameInfo->tempStatus.stake * multiple;
 			player->money += ret;
 			banker->money -= ret;
 			printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);

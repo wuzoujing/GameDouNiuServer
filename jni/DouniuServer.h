@@ -14,7 +14,6 @@
 
 #define LISTENQ 5
 #define MAXLINE 512
-#define MAX_USERS_EACH_DESK 6
 #define NAMELEN 20
 #define PORT 6666
 
@@ -28,10 +27,13 @@
 #ifndef _Included_DouniuServer_H
 #define _Included_DouniuServer_H
 
-extern int listenfd,connfd[MAX_USERS_EACH_DESK];
-extern UserInfo s_users[MAX_USERS_EACH_DESK];
-extern Card s_cards[COUNT_CARDS];
-extern int bankerIndex;
+//extern int listenfd,connfd[MAX_USERS_EACH_ROOM];
+//extern UserInfo s_users[MAX_USERS_EACH_ROOM];
+//extern Card s_cards[COUNT_CARDS];
+//extern int bankerIndex;
+extern int connfd[MAX_CLIENTS_SUPPORT];
+extern AllUserInfo s_arrayUser[MAX_CLIENTS_SUPPORT];
+extern RoomInfo s_arrayRoom[COUNT_ROOMS];
 
 //public
 extern int initAndAccept();

@@ -7,6 +7,9 @@
 #define COUNT_CARD_EACH_PLAYER 5
 #define MAX_IP_ADDR_LEN 20
 #define MAX_NAME_LEN 32
+#define COUNT_ROOMS 3
+#define MAX_CLIENTS_SUPPORT 18
+#define MAX_USERS_EACH_ROOM 6
 
 #ifndef _Included_DouniuStruct_H
 #define _Included_DouniuStruct_H
@@ -56,19 +59,42 @@ typedef struct GAME_INFO {
 	int maxCardValue;					// 若无牛，则获取最大的牌，如K,Q,J,10,...,A
 }GameInfo;
 
-typedef struct USER_INFO {
-	//int id;
-	char name[MAX_NAME_LEN];
-	long money;
-
-	int deskId;
-	char ipaddr[MAX_IP_ADDR_LEN];
-	long login_time;
+typedef struct TEMP_GAME_STATUS {
 	bool isPrepared;
 	enum TRYING_BANKER_STATUS bankerStatus;
 	int stake;
 	bool hasSubmitResult;
+}TempGameStatus;
+
+typedef struct DB_USER_INFO {
+	char name[MAX_NAME_LEN];
+	long money;
+	char mark[MAX_NAME_LEN];//个性签名
+	int avatarId;//个人头像
+	int level;
+	//int uniqueid;
+}DbUserInfo;
+
+typedef struct ALL_USER_INFO {
+	//int deskId;
+	long login_time;
+	char ipaddr[MAX_IP_ADDR_LEN];
+	DbUserInfo dbInfo;
+	//int connfd;
+}AllUserInfo;
+
+typedef struct ALL_GAME_INFO {
+	int deskId;
 	GameInfo gameInfo;
-}UserInfo;
+	TempGameStatus tempStatus;
+}AllGameInfo;
+
+typedef struct ROOM_INFO {
+	int roomId;
+	int bankerIndex;
+	int clientId[MAX_USERS_EACH_ROOM];
+	AllGameInfo allGameInfo[MAX_USERS_EACH_ROOM];
+	Card cards[COUNT_CARDS];
+}RoomInfo;
 
 #endif	//_Included_DouniuStruct_H

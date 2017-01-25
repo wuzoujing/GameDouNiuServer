@@ -7,10 +7,10 @@
 #ifndef _Included_GameLogic_H
 #define _Included_GameLogic_H
 
-extern void initializePai();
-extern void xiPai();
-extern void faPai();
+extern void initializePai(Card cards[], int countCards);
+extern void xiPai(Card cards[], int countCards);
+extern void faPai(AllGameInfo allGameInfo[], int maxCountUsers, Card cards[], int countCards);
 
-extern int checkoutStake(UserInfo* player, UserInfo* banker, char* resultStr);
+extern int checkoutStake(DbUserInfo* player, AllGameInfo* playerGameInfo, DbUserInfo* banker, AllGameInfo* bankerGameInfo, char* resultStr);
 
 #endif	//_Included_GameLogic_H

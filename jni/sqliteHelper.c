@@ -89,7 +89,7 @@ int select_by_table(sqlite3 *db, const char* sql)
 	return 0;
 }
 
-int select_by_table_with_name(sqlite3 *db, const char* sql, UserInfo *userInfo)
+int select_by_table_with_name(sqlite3 *db, const char* sql, DbUserInfo *dbInfo)
 {
 	int i = 0 ;
     int j = 0 ;
@@ -123,8 +123,8 @@ int select_by_table_with_name(sqlite3 *db, const char* sql, UserInfo *userInfo)
     }
 	printf("\n");
 
-	strcpy(userInfo->name, ppResult[nCol+1]);
-	userInfo->money = atoi(ppResult[nCol+2]);
+	strcpy(dbInfo->name, ppResult[nCol+1]);
+	dbInfo->money = atoi(ppResult[nCol+2]);
 	
 	sqlite3_free_table(ppResult);
 	return 0;

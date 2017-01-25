@@ -1,5 +1,8 @@
 # GameDouNiuServer - Changelog
 
+## Version 1.4 - 2016/10/14
+- 和DouniuServer同步更新：支持游戏室（初步）功能，完善代码框架，修改PLAY为SUBMIT。
+
 ## Version 1.3 - 2016/10/01
 - 和DouniuServer同步更新：增加\n解决TCP粘包问题，增加sqlite3数据库支持。
 
