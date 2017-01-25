@@ -4,8 +4,8 @@ package com.game.douniuserver.jni;
 import android.util.Log;
 
 
-public class DouniuServer {
-	private static String TAG = "[wzj]DouniuServer";
+public class DouniuServerInterface {
+	private static String TAG = "[wzj]DouniuServerInterface";
 
 	static {
 
@@ -17,7 +17,7 @@ public class DouniuServer {
 		}
 	}
 	
-	public DouniuServer() {
+	public DouniuServerInterface() {
 	}
 	
 	public String getString() {

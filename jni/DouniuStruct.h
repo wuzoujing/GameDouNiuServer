@@ -53,15 +53,16 @@ enum TRYING_BANKER_STATUS {
 typedef struct GAME_INFO {
 	Card cards[COUNT_CARD_EACH_PLAYER];
 	enum POKER_PATTERN pokerPattern;	// 优先比较牌型
-	int points;							// 如有牛且相等，则计算点数
 	int maxCardValue;					// 若无牛，则获取最大的牌，如K,Q,J,10,...,A
 }GameInfo;
 
 typedef struct USER_INFO {
-	int id;
+	//int id;
 	char name[MAX_NAME_LEN];
-	char ipaddr[MAX_IP_ADDR_LEN];
 	long money;
+
+	int deskId;
+	char ipaddr[MAX_IP_ADDR_LEN];
 	long login_time;
 	bool isPrepared;
 	enum TRYING_BANKER_STATUS bankerStatus;

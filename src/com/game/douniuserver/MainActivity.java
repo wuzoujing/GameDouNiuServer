@@ -4,7 +4,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.game.douniuserver.jni.DouniuServer;
+import com.game.douniuserver.jni.DouniuServerInterface;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -94,18 +94,39 @@ public class MainActivity extends Activity implements OnClickListener {
 		switch (v.getId()) {
 		case R.id.start_server_btn:
 			Log.v(TAG, "start_server_btn");
-			getIPAddr();
-			Intent bindIntent = new Intent(MainActivity.this, DouniuService.class);  
-            bindService(bindIntent, sconnection, Context.BIND_AUTO_CREATE);  
+			startServerAction();
+			//getIPAddr();
+			//Intent bindIntent = new Intent(MainActivity.this, DouniuService.class);  
+	        //bindService(bindIntent, sconnection, Context.BIND_AUTO_CREATE);  
 			break;
 		case R.id.stop_server_btn:
 			Log.v(TAG, "stop_server_btn");
-			unbindService(sconnection);
-			statusTv.setText("service not running");
+			stopServerAction();
+			//unbindService(sconnection);
+			//statusTv.setText("service not running");
 			break;
 		default:
 			break;
 		}
+	}
+	
+	public void startServerAction() {
+		Log.v(TAG, "startServerAction");
+		getIPAddr();
+		Intent bindIntent = new Intent(MainActivity.this, DouniuService.class);  
+        bindService(bindIntent, sconnection, Context.BIND_AUTO_CREATE);  
+	}
+	
+	public void stopServerAction() {
+		Log.v(TAG, "stopServerAction");
+		try {
+			unbindService(sconnection);
+		}
+		catch (IllegalArgumentException e) {
+			Log.v(TAG, "stop Server exception.");
+			e.printStackTrace();
+		}
+		statusTv.setText("service not running");
 	}
 	
     public void getIPAddr() {

@@ -51,9 +51,9 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	{
 		for (i=0;i<maxCountUsers;i++)
 		{
-			if (users[i].id != -1 && users[i].isPrepared)
+			if (users[i].deskId != -1 && users[i].isPrepared)
 			{
-				users[i].gameInfo.cards[j] = cards[index];	
+				users[i].gameInfo.cards[j] = cards[index];
 				index++;
 			}
 		}
@@ -62,7 +62,7 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	for (i=0;i<maxCountUsers;i++)
 	{
 		printf("  user %d\n",i);
-		if (users[i].id != -1 && users[i].isPrepared)
+		if (users[i].deskId != -1 && users[i].isPrepared)
 		{
 			for(j=0;j<COUNT_CARD_EACH_PLAYER;j++)
 			{
@@ -100,9 +100,15 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	}
 }*/
 
-void caculateResult(GameInfo* gameInfo)
+void calculateResult(GameInfo* gameInfo, bool isHasNiu)
 {
 	gameInfo->maxCardValue = getMaxCardValue(gameInfo->cards,COUNT_CARD_EACH_PLAYER);
+	if (isHasNiu == FALSE)
+	{
+		gameInfo->pokerPattern = POKER_PATTERN_WU_NIU;
+		printf("no need to calculate pattern as wuniu\n");
+		return;
+	}
 	if (checkZhaDan(gameInfo->cards, COUNT_CARD_EACH_PLAYER))
 	{
 		gameInfo->pokerPattern = POKER_PATTERN_ZHA_DAN;
@@ -120,8 +126,8 @@ void caculateResult(GameInfo* gameInfo)
 	}
 	else
 	{
-		gameInfo->points = calculatePoints(gameInfo->cards, COUNT_CARD_EACH_PLAYER);
-		switch(gameInfo->points)
+		int points = calculatePoints(gameInfo->cards, COUNT_CARD_EACH_PLAYER);
+		switch(points)
 		{
 			case 0:
 				printf("wuniu\n");

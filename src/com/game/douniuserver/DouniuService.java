@@ -1,6 +1,6 @@
 package com.game.douniuserver;
 
-import com.game.douniuserver.jni.DouniuServer;
+import com.game.douniuserver.jni.DouniuServerInterface;
 
 import android.app.Service;
 import android.content.Intent;
@@ -13,7 +13,7 @@ public class DouniuService extends Service {
 	private final String TAG = "[wzj]DouniuService";
 	
 	private final IBinder binder = new MyBinder();
-	private DouniuServer douniuServer;
+	private DouniuServerInterface douniuServer;
 	private Handler handler = new Handler();
 	
 	@Override
@@ -25,7 +25,7 @@ public class DouniuService extends Service {
 	@Override
 	public void onCreate() {
 		Log.d(TAG, "onCreate");
-		douniuServer = new DouniuServer();
+		douniuServer = new DouniuServerInterface();
 		super.onCreate();
 	}
 
