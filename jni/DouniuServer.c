@@ -16,6 +16,28 @@
 int listenfd,connfd[MAX_USERS];//分别记录服务器端的套接字与连接的多个客户端的套接字
 UserInfo s_users[MAX_USERS];
 Card s_cards[COUNT_CARDS];
+int bankerIndex = 0;
+
+void resetUserInfoAndConnfd(int i)
+{
+    connfd[i]=-1;
+    s_users[i].id = -1;
+    strcpy(s_users[i].name, "");
+    strcpy(s_users[i].ipaddr, "");
+	s_users[i].money = 10000;
+    s_users[i].isPrepared = FALSE;
+    s_users[i].bankerStatus = TBS_NONE;
+    s_users[i].stake = 0;
+    s_users[i].hasSubmitResult = FALSE;
+}
+
+void resetGameInfo(GameInfo* gameInfo)
+{
+	//gameInfo->cards;
+	gameInfo->pokerPattern = POKER_PATTERN_WU_NIU;
+	gameInfo->points = 0;
+	gameInfo->maxCardValue = 0;
+}
 
 int initAndAccept()
 {
@@ -57,11 +79,7 @@ int initAndAccept()
     int i=0;
     for(i=0;i<MAX_USERS;i++)
     {
-        connfd[i]=-1;
-		s_users[i].id = -1;
-		strcpy(s_users[i].name, "");
-		strcpy(s_users[i].ipaddr, "");
-		s_users[i].isPrepared = FALSE;
+		resetUserInfoAndConnfd(i);
     }
 
     while(1)
@@ -96,6 +114,46 @@ void disconnect()
 #ifndef USE_IN_ANDROID
     exit(0);
 #endif	//USE_IN_ANDROID
+}
+
+void appendAllUsersInfo(char* databuf)
+{
+	char info[256];
+	int i = 0;
+	for(i=0;i<MAX_USERS;i++)
+	{
+		if (s_users[i].id != -1)
+		{
+			sprintf(info, "%d#%s#%ld#", s_users[i].id, s_users[i].name, s_users[i].login_time);
+			strcat(databuf, info);
+		}
+	}
+	if (strlen(databuf) > 0)
+	{
+		databuf[strlen(databuf) - 1] = 0;
+	}
+	//return databuf;
+}
+
+int judgeBanker()
+{
+	int index = 0;
+	srand(time(NULL));
+	index = rand()%MAX_USERS;
+	printf("[judgeBanker]index:%d\n",index);
+	while(1)
+	{
+		if(connfd[index]!=-1 && s_users[index].bankerStatus == TBS_TRYING)
+		{
+			break;
+		}
+		else
+		{
+			index = (index+1)%MAX_USERS;
+		}
+	}
+	printf("[judgeBanker]end index:%d\n",index);
+	return index;
 }
 
 int main()
@@ -164,10 +222,9 @@ int processMsg(char* buffer, int n)
 		printf("[processMsg]> data[%d] = %s\n", i, subtoken);
 	}
 
-	char info[256];
-	char buf[256];
-	bool hasSomeoneNotPrepared = TRUE;
-	int countUsers = 0;
+	//char info[256];
+	char databuf[512];
+	char resultStr[512];
 	
 	// 处理消息
 	switch(data[OFT_CMD][0])
@@ -175,24 +232,14 @@ int processMsg(char* buffer, int n)
 	case CMD_LIST:
 		{
 			printf("[processMsg]CMD_LIST\n");
-			memset(buf, 0, sizeof(buf));
-			for(i=0;i<MAX_USERS;i++)
-			{
-				if (s_users[i].id != -1)
-				{
-					sprintf(info, "%d#%s#%ld#", s_users[i].id, s_users[i].name, s_users[i].login_time);
-					strcat(buf, info);
-				}
-			}
-			if (strlen(buf) > 0)
-			{
-				buf[strlen(buf) - 1] = 0;
-			}
+			memset(databuf, 0, sizeof(databuf));
+			appendAllUsersInfo(databuf);
 
-			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_LIST, n, time(NULL), buf);
-			printf("[S->C][processMsg]sendBuff:%s\n",sendBuff);
+			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_LIST, n, time(NULL), databuf);
+			printf("[S->C][processMsg]%s\n",sendBuff);
 
 			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
 		}
 		break;
 	case CMD_LOGIN:
@@ -202,19 +249,26 @@ int processMsg(char* buffer, int n)
 			s_users[n].login_time = atol(data[OFT_TIM]);
 			strcpy(s_users[n].name, data[OFT_FRM]);
 
-			sprintf(sendBuff, "%c:%d:%ld:%s\t%s\0", CMD_LOGIN, n, time(NULL), data[OFT_FRM], "join in");
-			printf("[S->C][processMsg]sendBuff:%s\n",sendBuff);
+			memset(databuf, 0, sizeof(databuf));
+			appendAllUsersInfo(databuf);
+
+			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_LOGIN, n, time(NULL), databuf);//data[OFT_FRM]
+			printf("[S->C][processMsg]%s\n",sendBuff);
 
 			//反馈login OK消息给client
 			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
 			
 			//把新用户的加入告知其他用户
 			for(i=0;i<MAX_USERS;i++)
 			{
 				if(i!=n && connfd[i]!=-1)
 				{
-					printf("[S->C][processMsg]i:%d notify other users\n",i);
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d", CMD_S2C_USER_IN, i, time(NULL), n);
+					printf("[S->C][processMsg]notify login msg[%s] to user[%d]\n",sendBuff, i);
 					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
 				}
 				else if (i==n)
 				{
@@ -230,28 +284,77 @@ int processMsg(char* buffer, int n)
 	case CMD_LOGOUT:
 		{
 			printf("[processMsg]CMD_LOGOUT\n");
+
+			//反馈logout OK消息给client
 			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_LOGOUT, n, time(NULL), "logout ok!");
-			printf("[S->C][processMsg]sendBuff:%s\n",sendBuff);
+			printf("[S->C][processMsg]%s\n",sendBuff);
 			write(connfd[n],sendBuff,strlen(sendBuff));
-			s_users[n].id = -1;
-			strcpy(s_users[n].name, "");
-			strcpy(s_users[n].ipaddr, "");
-			s_users[n].isPrepared = TRUE;
+			usleep(50);
+
+			//同时通知其他用户有人退出登录
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if(i!=n && connfd[i]!=-1)
+				{
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d", CMD_S2C_USER_OUT, i, time(NULL), n);
+					printf("[S->C][processMsg]notify logout msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+				else if (i==n)
+				{
+					printf("[processMsg]i:%d itself, ip:%s\n",i, s_users[n].ipaddr);
+				}
+				else
+				{
+					printf("[processMsg]i:%d connfd null\n",i);
+				}
+			}
+
 			printf("[processMsg]exit thread\n");
 			close(connfd[n]);
-			connfd[n] = -1;
+
+			//清理变量及退出当前client的处理线程
+			resetUserInfoAndConnfd(n);
 			pthread_exit(0);
 		}
 		break;
 	case CMD_PREPARE:
 		{
 			printf("[processMsg]CMD_PREPARE\n");
+
+			//反馈prepare OK消息给client
 			s_users[n].isPrepared = TRUE;
-			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_PREPARE, n, time(NULL), "prepared");
-			printf("[S->C][processMsg]sendBuff:%s\n",sendBuff);
-			
-			hasSomeoneNotPrepared = FALSE;
-			memset(sendBuff, 0, sizeof(sendBuff));
+			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_PREPARE, n, time(NULL), "prepare ok");
+			printf("[S->C][processMsg]%s\n",sendBuff);
+			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
+
+			//同时通知其他用户有人准备就绪
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if(i!=n && connfd[i]!=-1)
+				{
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d", CMD_S2C_USER_PREP, i, time(NULL), n);
+					printf("[S->C][processMsg]notify prepare msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+				else if (i==n)
+				{
+					printf("[processMsg]i:%d itself, ip:%s\n",i, s_users[n].ipaddr);
+				}
+				else
+				{
+					printf("[processMsg]i:%d connfd null\n",i);
+				}
+			}
+
+			//判断是否所有用户都准备就绪
+			int countUsers = 0;
+			bool hasSomeoneNotPrepared = FALSE;//hasSomeoneNotPrepared = FALSE;
 			for(i=0;i<MAX_USERS;i++)
 			{
 				if (s_users[i].id != -1)
@@ -260,24 +363,39 @@ int processMsg(char* buffer, int n)
 					if (!s_users[i].isPrepared)
 					{
 						hasSomeoneNotPrepared = TRUE;
+						printf("[processMsg]someone not prepare\n");
 						break;
 					}
 				}
 			}
 			
-			//用户数超过2且所有用户都准备就绪，将发牌
+			//若用户数超过2且所有用户都准备就绪，将洗牌并通知用户开始抢庄
 			printf("[processMsg]countUsers:%d,will fapai\n",countUsers);
-			if (countUsers >= 1 && !hasSomeoneNotPrepared)
+			if (countUsers >= 2 && !hasSomeoneNotPrepared)
 			{
+				printf("[processMsg]all users is already preparing...will trying banker\n");
 				printf("[processMsg]->initializePai\n");
 				initializePai(s_cards, COUNT_CARDS);
 				printf("[processMsg]->xiPai\n");
 				xiPai(s_cards,COUNT_CARDS);
 				printf("[processMsg]->faPai\n");
 				faPai(s_users, MAX_USERS, s_cards, COUNT_CARDS);
+
+				//通知用户开始抢庄
+				for(i=0;i<MAX_USERS;i++)
+				{
+					if (s_users[i].id != -1)
+					{
+						memset(sendBuff, 0, sizeof(sendBuff));
+						sprintf(sendBuff, "%c:%d:%ld:%s", CMD_S2C_WILL_BANKER, i, time(NULL), "WILL_BANKER");
+						printf("[S->C][processMsg]notify msg[%s] to user[%d]\n",sendBuff, i);
+						write(connfd[i],sendBuff,strlen(sendBuff));
+						usleep(50);
+					}
+				}
 				
 				//TODO:send to client
-				memset(buf, 0, sizeof(buf));
+				/*memset(databuf, 0, sizeof(databuf));
 				for(i=0;i<MAX_USERS;i++)
 				{
 					if (s_users[i].id != -1)
@@ -285,23 +403,23 @@ int processMsg(char* buffer, int n)
 						sprintf(info, "%d#%s#%d#%d#%d#%d#%d#", s_users[i].id, s_users[i].name, s_users[i].gameInfo.cards[0].id, 
 							s_users[i].gameInfo.cards[1].id, s_users[i].gameInfo.cards[2].id, s_users[i].gameInfo.cards[3].id, 
 							s_users[i].gameInfo.cards[4].id);
-						strcat(buf, info);
+						strcat(databuf, info);
 					}
 				}
-				if (strlen(buf) > 0)
+				if (strlen(databuf) > 0)
 				{
-					buf[strlen(buf) - 1] = 0;
+					databuf[strlen(databuf) - 1] = 0;
 				}
-				sprintf(sendBuff, "%c:%d:%ld:%s", CMD_START, n, time(NULL), buf);
-				printf("[S->C][processMsg]sendBuff:%s\n",sendBuff);
-				
 				for (i=0;i<MAX_USERS;i++)
 				{
 					if (s_users[i].id != -1)
 					{
+						memset(sendBuff, 0, sizeof(sendBuff));
+						sprintf(sendBuff, "%c:%d:%ld:%s", CMD_S2C_WILL_START, i, time(NULL), databuf);
+						printf("[S->C][processMsg]%s\n",sendBuff);
 						write(connfd[i],sendBuff,strlen(sendBuff));
 					}
-				}
+				}*/
 			}
 			else
 			{
@@ -312,20 +430,210 @@ int processMsg(char* buffer, int n)
 	case CMD_TRYINGBANKER:
 		{
 			printf("[processMsg]CMD_TRYINGBANKER\n");
-			//TODO: 庄家如何决定?时间先后还是随机?
 			
+			//反馈TRYINGBANKER OK消息给client
+			printf("[processMsg]value:%d\n",atoi(data[OFT_DAT]));
+			if (atoi(data[OFT_DAT]) == 1)
+			{
+				s_users[n].bankerStatus = TBS_TRYING;
+				printf("[processMsg]TBS_TRYING\n");
+			}
+			else
+			{
+				s_users[n].bankerStatus = TBS_SKIP;
+				printf("[processMsg]TBS_SKIP\n");
+			}
+			
+			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_TRYINGBANKER, n, time(NULL), "tryingbanker ok");
+			printf("[S->C][processMsg]%s\n",sendBuff);
+			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
+
+			//判断是否所有用户都已抢庄或不抢
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1)
+				{
+					if (s_users[i].bankerStatus == TBS_NONE)
+					{
+						printf("[processMsg]someone[%d] is TBS_NONE, wait ...\n", i);
+						return;
+					}
+				}
+			}
+
+			//若所有用户都对抢庄或不抢，则决定庄家，并通知用户开始下注
+			bankerIndex = judgeBanker();
+			printf("[processMsg]all users is already tryingbanker, and banker is %d, will stake...\n",bankerIndex);
+			
+			//通知用户(除庄家外)开始下注
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1 && s_users[i].id != bankerIndex)
+				{
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d", CMD_S2C_WILL_STAKE, i, time(NULL), bankerIndex);
+					printf("[S->C][processMsg]notify msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+			}
 		}
 		break;
 	case CMD_STAKE:
 		{
 			printf("[processMsg]CMD_STAKE\n");
-			
+
+			//反馈STAKE OK消息给client
+			printf("[processMsg]value:%d\n",atoi(data[OFT_DAT]));
+			s_users[n].stake = atoi(data[OFT_DAT]);
+			sprintf(sendBuff, "%c:%d:%ld:%s", CMD_STAKE, n, time(NULL), "stake ok");
+			printf("[S->C][processMsg]%s\n",sendBuff);
+			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
+
+			//同时通知其他用户其赌注
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if(i!=n && connfd[i]!=-1)
+				{
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d#%s", CMD_S2C_STAKE_VALUE, i, time(NULL), n, data[OFT_DAT]);
+					printf("[S->C][processMsg]notify stake msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+				else if (i==n)
+				{
+					printf("[processMsg]i:%d itself, ip:%s\n",i, s_users[n].ipaddr);
+				}
+				else
+				{
+					printf("[processMsg]i:%d connfd null\n",i);
+				}
+			}
+
+			//判断是否所有用户(除庄家)都已下注
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1 && s_users[i].id != bankerIndex)
+				{
+					if (s_users[i].stake <= 0)
+					{
+						printf("[processMsg]someone's stake is 0, wait ...\n");
+						return;
+					}
+				}
+			}
+
+			//若所有用户都已下注，则告知各用户自己的牌面
+			for (i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1)
+				{
+					memset(databuf, 0, sizeof(databuf));
+					sprintf(databuf, "%d#%s#%d#%d#%d#%d#%d", s_users[i].id, s_users[i].name, s_users[i].gameInfo.cards[0].id, 
+						s_users[i].gameInfo.cards[1].id, s_users[i].gameInfo.cards[2].id, s_users[i].gameInfo.cards[3].id, 
+						s_users[i].gameInfo.cards[4].id);
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%s", CMD_S2C_WILL_START, i, time(NULL), databuf);
+					printf("[S->C][processMsg]msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+			}
 		}
 		break;
 	case CMD_PLAY:
 		{
 			printf("[processMsg]CMD_PLAY\n");
+
+			//根据用户提交的是否有牛，计算牌型并反馈
+			printf("[processMsg]value:%d\n",atoi(data[OFT_DAT]));
+			if (atoi(data[OFT_DAT]) == 1)
+			{
+				printf("[processMsg]youniu, need to calculate\n");
+				caculateResult(&(s_users[n].gameInfo));
+			}
+			else
+			{
+				printf("[processMsg]wuniu, no need to calculate\n");
+				resetGameInfo(&(s_users[n].gameInfo));
+			}
+			s_users[n].hasSubmitResult = TRUE;
+
+			sprintf(sendBuff, "%c:%d:%ld:%d", CMD_PLAY, n, time(NULL), s_users[n].gameInfo.pokerPattern);
+			printf("[S->C][processMsg]%s\n",sendBuff);
+			write(connfd[n],sendBuff,strlen(sendBuff));
+			usleep(50);
+
+			//通知其他用户其牌面及牌型
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if(i!=n && connfd[i]!=-1)
+				{
+					memset(sendBuff, 0, sizeof(sendBuff));
+					sprintf(sendBuff, "%c:%d:%ld:%d#%d", CMD_S2C_CARD_PATTERN, i, time(NULL), n, s_users[n].gameInfo.pokerPattern);
+					printf("[S->C][processMsg]notify pattern msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+				else if (i==n)
+				{
+					printf("[processMsg]i:%d itself, ip:%s\n",i, s_users[n].ipaddr);
+				}
+				else
+				{
+					printf("[processMsg]i:%d connfd null\n",i);
+				}
+			}
+
+			//判断是否所有用户都已提交结果
+			for(i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1)
+				{
+					if (s_users[i].hasSubmitResult == FALSE)
+					{
+						printf("[processMsg]someone not submit result, wait ...\n");
+						return;
+					}
+				}
+			}
+			//若所有用户都已提交结果，则比较庄家和闲家，并结清赌注
+			int resultForBanker = 0;
+			int moneyWinOrLost = 0;
+			for (i=0;i<MAX_USERS;i++)
+			{
+				if (s_users[i].id != -1 && s_users[i].id != bankerIndex)
+				{
+					printf("i:%d->checkoutStake\n",i);
+					memset(resultStr, 0, sizeof(resultStr));
+					moneyWinOrLost = checkoutStake(&s_users[i], &s_users[bankerIndex], resultStr);
+					resultForBanker -= moneyWinOrLost;
+					printf("[processMsg]moneyWinOrLost:%d,resultForBanker:%d\n",moneyWinOrLost,resultForBanker);
+					sprintf(sendBuff, "%c:%d:%ld:%d#%ld#%s", CMD_S2C_GAME_RESULT, i, time(NULL), moneyWinOrLost, s_users[n].money, resultStr);
+					printf("[S->C][processMsg]notify result msg[%s] to user[%d]\n",sendBuff, i);
+					write(connfd[i],sendBuff,strlen(sendBuff));
+					usleep(50);
+				}
+			}
+
+			//通知庄家输赢结果
+			if (resultForBanker>0)
+			{
+				strcpy(resultStr, "win");
+			}
+			else
+			{
+				strcpy(resultStr, "lost");
+			}
+			sprintf(sendBuff, "%c:%d:%ld:%d#%ld#%s", CMD_S2C_GAME_RESULT, i, time(NULL), resultForBanker, s_users[bankerIndex].money, resultStr);
+			printf("[S->C][processMsg]notify result msg[%s] to banker[%d]\n",sendBuff, bankerIndex);
+			write(connfd[bankerIndex],sendBuff,strlen(sendBuff));
+			usleep(50);
 			
+			printf("[processMsg]play end\n");
 		}
 		break;
 	default:

@@ -14,7 +14,7 @@
 
 #define LISTENQ 5
 #define MAXLINE 512
-#define MAX_USERS 3
+#define MAX_USERS 6
 #define NAMELEN 20
 #define PORT 6666
 
@@ -24,6 +24,7 @@
 extern int listenfd,connfd[MAX_USERS];
 extern UserInfo s_users[MAX_USERS];
 extern Card s_cards[COUNT_CARDS];
+extern int bankerIndex;
 
 //public
 extern int initAndAccept();

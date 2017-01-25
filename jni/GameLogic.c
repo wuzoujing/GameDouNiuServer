@@ -1,79 +1,6 @@
 #include "GameLogic.h"
+#include "GameRule.h"
 
-int getLogicValue(int id)
-{
-	int value = 0;
-	if (id >= 0 && id < 13) 
-	{//方块0~12
-		value = id + 1;
-		if (value > 10) {//J,Q,K
-			value = 10;
-		}
-	}
-	else if(id >= 13 && id < 26)
-	{//梅花13~25
-		value = id +1 - 13;
-		if (value > 10) {//J,Q,K
-			value = 10;
-		}
-	}
-	else if(id >= 26 && id < 39)
-	{//红桃26~38
-		value = id + 1 - 26;
-		if (value > 10) {//J,Q,K
-			value = 10;
-		}
-	}
-	else if(id >= 39 && id < 52)
-	{//黑桃39~51
-		value = id + 1 - 39;
-		if (value > 10) {//J,Q,K
-			value = 10;
-		}
-	}
-	return value;
-}
-
-Card updateCardById(int id)
-{
-	Card card;
-	card.id = id;
-	card.value = getLogicValue(id);
-	int num1 = id%13+1;
-	int num2 = id/13+1;
-	card.cardValue = num1;
-	card.cardType = num2;
-	if (num1 >= 2 && num1 <= 9)
-	{
-		sprintf(card.cardFace, "%d", num1);
-	}
-	else if (num1 == 10)
-	{
-		strcpy(card.cardFace, "10");//face = "10";
-	} 
-	else if (num1 == 11)
-	{
-		strcpy(card.cardFace, "J");//face = "J";
-	} 
-	else if (num1 == 12)
-	{
-		strcpy(card.cardFace, "Q");//face = "Q";
-	} 
-	else if (num1 == 13)
-	{
-		strcpy(card.cardFace, "K");//face = "K";
-	} 
-	else if (num1 == 1)
-	{
-		strcpy(card.cardFace, "A");//face = "A";
-	}
-	printf(">id:%2d",card.id);
-	printf(" value:%2d",card.value);
-	printf(" cardValue:%2d",card.cardValue);
-	printf(" cardType:%d",card.cardType);
-	printf(" cardFace:%2s\n",card.cardFace);
-	return card;
-}
 
 void initializePai(Card cards[], int countCards)
 {
@@ -173,43 +100,156 @@ void faPai(UserInfo users[], int maxCountUsers, Card cards[], int countCards)
 	}
 }*/
 
-int GetMaxCardValue(Card cards[], int countCards)
+void caculateResult(GameInfo* gameInfo)
 {
-	int max = 0;
-	int i=0;
-	for (i=0;i<countCards;i++)
+	gameInfo->maxCardValue = getMaxCardValue(gameInfo->cards,COUNT_CARD_EACH_PLAYER);
+	if (checkZhaDan(gameInfo->cards, COUNT_CARD_EACH_PLAYER))
 	{
-		if(max < cards[i].cardValue)
+		gameInfo->pokerPattern = POKER_PATTERN_ZHA_DAN;
+		printf("zhadan\n");
+	}
+	else if (checkFiveHua(gameInfo->cards, COUNT_CARD_EACH_PLAYER))
+	{
+		gameInfo->pokerPattern = POKER_PATTERN_FIVE_HUA;
+		printf("fivehua\n");
+	}
+	else if (checkFourHua(gameInfo->cards, COUNT_CARD_EACH_PLAYER))
+	{
+		gameInfo->pokerPattern = POKER_PATTERN_FOUR_HUA;
+		printf("fourhua\n");
+	}
+	else
+	{
+		gameInfo->points = calculatePoints(gameInfo->cards, COUNT_CARD_EACH_PLAYER);
+		switch(gameInfo->points)
 		{
-			max = cards[i].cardValue;
+			case 0:
+				printf("wuniu\n");
+				gameInfo->pokerPattern = POKER_PATTERN_WU_NIU;
+				break;
+			case 1:
+				printf("niu 1\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_1;
+				break;
+			case 2:
+				printf("niu 2\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_2;
+				break;
+			case 3:
+				printf("niu 3\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_3;
+				break;
+			case 4:
+				printf("niu 4\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_4;
+				break;
+			case 5:
+				printf("niu 5\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_5;
+				break;
+			case 6:
+				printf("niu 6\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_6;
+				break;
+			case 7:
+				printf("niu 7\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_7;
+				break;
+			case 8:
+				printf("niu 8\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_8;
+				break;
+			case 9:
+				printf("niu 9\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_9;
+				break;
+			case 10:
+				printf("niuniu\n");
+				gameInfo->pokerPattern = POKER_PATTERN_NIU_NIU;
+				break;
+			default:
+				printf("no impossible case\n");
+				break;
 		}
 	}
-	return max;
 }
 
-bool CheckZhaDan(Card cards[], int countCards)
+int getMultiple(enum POKER_PATTERN pattern)
 {
-	int i=0;
-	int index;
-	int oldValue;
-	int countList[13];
-	for(i=0;i<13;i++)
+	int multiple = 1;
+	if (pattern == POKER_PATTERN_ZHA_DAN ||pattern == POKER_PATTERN_FIVE_HUA)
 	{
-		countList[i]=0;
+		multiple = 5;
 	}
-	for(i=0;i<countCards;i++)
+	else if (pattern == POKER_PATTERN_FOUR_HUA)
 	{
-		index=cards[i].cardValue-1;
-		countList[index]++;
+		multiple = 4;
 	}
-	for(i=0;i<13;i++)
+	else if (pattern == POKER_PATTERN_NIU_NIU)
 	{
-		printf("[CheckZhaDan]i:%d,value:%d\n",i,countList[i]);
-		if(countList[i]>=4)
+		multiple = 3;
+	}
+	else if (pattern <= POKER_PATTERN_NIU_9 && pattern >= POKER_PATTERN_NIU_7)
+	{
+		multiple = 2;
+	}
+	return multiple;
+}
+
+// checkout stake between player and banker
+// 		return value: money that player win (positive) or lost (negative)
+int checkoutStake(UserInfo* player, UserInfo* banker, char* resultStr)
+{
+	int ret = 0;
+	int multiple = 1;
+	if (banker->gameInfo.pokerPattern > player->gameInfo.pokerPattern)
+	{
+		printf("[checkoutStake]banker win\n");
+		strcpy(resultStr, "lost");
+		multiple = getMultiple(banker->gameInfo.pokerPattern);
+		ret = 0 - player->stake * multiple;
+		player->money += ret;
+		banker->money -= ret;
+		printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
+	}
+	else if (banker->gameInfo.pokerPattern < player->gameInfo.pokerPattern)
+	{
+		printf("[checkoutStake]player win\n");
+		strcpy(resultStr, "win");
+		multiple = getMultiple(player->gameInfo.pokerPattern);
+		ret = player->stake * multiple;
+		player->money += ret;
+		banker->money -= ret;
+		printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
+	}
+	else
+	{
+		if (banker->gameInfo.maxCardValue > player->gameInfo.maxCardValue)
 		{
-			printf("[CheckZhaDan]is zhadan\n");
-			return TRUE;
+			printf("[checkoutStake]banker win as maxCardValue\n");
+			strcpy(resultStr, "lost");
+			multiple = getMultiple(banker->gameInfo.pokerPattern);
+			ret = 0 - player->stake * multiple;
+			player->money += ret;
+			banker->money -= ret;
+			printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
+		}
+		else if (banker->gameInfo.maxCardValue < player->gameInfo.maxCardValue)
+		{
+			printf("[checkoutStake]player win as maxCardValue\n");
+			strcpy(resultStr, "win");
+			multiple = getMultiple(player->gameInfo.pokerPattern);
+			ret = player->stake * multiple;
+			player->money += ret;
+			banker->money -= ret;
+			printf("[checkoutStake]banker->money:%ld,player->money:%ld\n",banker->money,player->money);
+		}
+		else
+		{
+			 printf("[checkoutStake]pattern and maxCard is equal\n");
+			 strcpy(resultStr, "equal");
 		}
 	}
-	return FALSE;
+	printf("[checkoutStake]end resultStr:%s\n",resultStr);
+	return ret;
 }

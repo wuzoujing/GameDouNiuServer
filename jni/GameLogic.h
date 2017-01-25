@@ -7,12 +7,10 @@
 #ifndef _Included_GameLogic_H
 #define _Included_GameLogic_H
 
-int getLogicValue(int id);
-Card updateCardById(int id);
-void initializePai();
-void xiPai();
-void faPai();
-int GetMaxCardValue(Card cards[], int n);
-bool CheckZhaDan(Card cards[], int n);
+extern void initializePai();
+extern void xiPai();
+extern void faPai();
+
+extern int checkoutStake(UserInfo* player, UserInfo* banker, char* resultStr);
 
 #endif	//_Included_GameLogic_H
