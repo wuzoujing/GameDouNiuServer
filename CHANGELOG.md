@@ -1,5 +1,8 @@
 # GameDouNiuServer - Changelog
 
+## Version 1.4.1 - 2016/10/14
+- 和DouniuServer同步更新：解决游戏循环bug。
+
 ## Version 1.4 - 2016/10/14
 - 和DouniuServer同步更新：支持游戏室（初步）功能，完善代码框架，修改PLAY为SUBMIT。
 
